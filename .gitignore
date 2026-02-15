@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.env
+node_modules/
+out/
+dist/
+*.vsix
+.vscode-test/
+.DS_Store
+Thumbs.db
