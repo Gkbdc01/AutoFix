@@ -1,38 +1,30 @@
 {
   "name": "autofix",
-  "displayName": "Extension",
-  "description": "AI Debugging Tool",
+  "displayName": "AutoFix",
+  "description": "AI-powered code error detection on save",
   "version": "0.0.1",
   "engines": {
-    "vscode": "^1.108.1"
+    "vscode": "^1.96.0"
   },
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
-  "main": "./extension.js",
-  "contributes": {
-    "commands": [
-      {
-        "command": "autofix.helloWorld",
-        "title": "Hello World"
-      }
-    ]
-  },
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./src/extension.js",
+  "contributes": {},
   "scripts": {
-    "lint": "eslint .",
-    "pretest": "npm run lint",
+    "lint": "eslint src",
     "test": "vscode-test"
   },
   "devDependencies": {
-    "@types/mocha": "^10.0.10",
-    "@types/node": "22.x",
-    "@types/vscode": "^1.108.1",
-    "@vscode/test-cli": "^0.0.12",
-    "@vscode/test-electron": "^2.5.2",
-    "eslint": "^9.39.2"
+    "@types/vscode": "^1.96.0",
+    "@vscode/test-cli": "^0.0.10",
+    "@vscode/test-electron": "^2.4.1",
+    "eslint": "^9.14.0"
   },
   "dependencies": {
-    "axios": "^1.13.4"
+    "axios": "^1.7.0"
   }
 }
