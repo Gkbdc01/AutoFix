@@ -148,13 +148,22 @@ Both `/analyze` and `/fix` include a `source` field to help with debugging:
 | `error` | LLM call failed — check `message` or `explanation` for details |
 | `fallback` | API key or base URL not configured |
 
+## Security
+
+| Practice | Implementation |
+|----------|---------------|
+| Rate Limiting | 30 requests/minute per IP via SlowAPI |
+| Input Validation | Pydantic v2 schema validation on all endpoints |
+| CORS | Configured via FastAPI middleware |
+| Secrets | `.env` gitignored, `.env.example` provided |
+
 ## Project Structure
 
 ```
 AutoFix-backend/
 ├── app/
 │   ├── __init__.py
-│   ├── main.py              # FastAPI app, CORS, routes
+│   ├── main.py              # FastAPI app, CORS, rate limiting, routes
 │   ├── models/
 │   │   ├── __init__.py
 │   │   └── schemas.py       # Pydantic request/response models
@@ -164,7 +173,7 @@ AutoFix-backend/
 │   │   └── fix.py           # POST /fix endpoint
 │   └── services/
 │       ├── __init__.py
-│       └── llm_service.py   # LLM integration (analyze + fix)
+│       └── llm_service.py   # LLM integration (Azure AI Foundry)
 ├── .env                      # Your local config (gitignored)
 ├── .env.example              # Template for teammates
 ├── requirements.txt
