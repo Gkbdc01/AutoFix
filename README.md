@@ -13,14 +13,14 @@ Write code → Save (Ctrl+S) → Error detected → Line highlighted red
 ## Architecture
 
 ```
-┌─────────────────────┐       POST /analyze        ┌──────────────────┐       ┌─────────────────┐
-│   VS Code Extension │ ──────────────────────────▶ │  FastAPI Backend │ ────▶ │  Azure AI Foundry│
-│   (TypeScript/JS)   │ ◀────────────────────────── │  (Python)        │ ◀──── │  GPT-5-nano      │
-│                     │       POST /fix             │                  │       │                  │
-│  • Error highlight  │                             │  • Input valid.  │       │  • Code analysis │
-│  • Toast messages   │                             │  • Rate limiting │       │  • Error fixing  │
-│  • One-click fix    │                             │  • CORS          │       │                  │
-└─────────────────────┘                             └──────────────────┘       └─────────────────┘
+┌─────────────────────┐       POST /analyze          ┌──────────────────┐       ┌─────────────────┐
+│   VS Code Extension │ ──────────────────────────▶ │  FastAPI Backend │ ────▶ │ Azure AI Foundry│
+│   (TypeScript/JS)   │ ◀────────────────────────── │  (Python)        │ ◀──── │ GPT-5-nano      │
+│                     │        POST /fix             │                  │       │                 │
+│  • Error highlight  │                              │  • Input valid.  │       │ • Code analysis │
+│  • Toast messages   │                              │  • Rate limiting │       │ • Error fixing  │
+│  • One-click fix    │                              │  • CORS          │       │                 │
+└─────────────────────┘                              └──────────────────┘       └─────────────────┘
 ```
 
 ## Project Structure
