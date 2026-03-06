@@ -1,51 +1,66 @@
-# autofix README
+# AutoFix — VS Code Extension
 
-This is the README for your extension "autofix". After writing up a brief description, we recommend including the following sections.
+AI-powered error detection and one-click fix for Visual Studio Code. Analyzes your code on every save using GPT-5-nano and highlights errors directly in the editor.
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+### Error Detection on Save
+Save any file → AutoFix sends the code to the backend → errors are highlighted in red.
 
-For example if there is an image subfolder under your extension project workspace:
+### One-Click Fix
+When an error is detected, click **"🔧 Fix This"** in the notification → the LLM generates and applies the corrected code automatically.
 
-\!\[feature X\]\(images/feature-x.png\)
-
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+### Multi-Language Support
+Works with any language supported by VS Code — Python, JavaScript, TypeScript, Java, C++, Go, and more.
 
 ## Requirements
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+- **AutoFix Backend** must be running on `http://localhost:5000`
+- Node.js 18+
+- VS Code 1.96+
+
+## Setup
+
+```bash
+cd AutoFix-extension
+npm install
+```
+
+### Run in Development
+1. Open this folder in VS Code
+2. Press **F5** → launches Extension Development Host
+3. In the new window, open any code file
+4. Save (**Ctrl+S**) → errors will be highlighted
+
+### Backend (required)
+```bash
+cd ../AutoFix-backend
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn app.main:app --port 5000 --reload
+```
+
+## How It Works
+
+1. **`onDidSaveTextDocument`** — listens for file saves
+2. Sends `{ language, code }` to `POST http://localhost:5000/analyze`
+3. If error found → highlights the line in red + shows hover message + toast notification
+4. User clicks **"🔧 Fix This"** → sends to `POST http://localhost:5000/fix`
+5. Receives corrected code → replaces file content → auto-saves → re-analyzes
 
 ## Extension Settings
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+Currently no configurable settings. Future versions will add:
+- Configurable backend URL
+- Toggle auto-fix on save
+- Error severity filtering
 
-For example:
+## Known Limitations
 
-This extension contributes the following settings:
-
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
-
-## Known Issues
-
-Calling out known issues can help limit users opening duplicate issues against your extension.
-
-## Release Notes
-
-Users appreciate release notes as you update your extension.
-
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
+- Detects one error at a time (most critical first)
+- Requires backend server running locally
+- LLM response time depends on network and Azure AI Foundry latency
 
 ---
 
