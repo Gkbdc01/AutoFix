@@ -10,10 +10,17 @@
     "Other"
   ],
   "activationEvents": [
-    "onStartupFinished"
+    "*"
   ],
   "main": "./src/extension.js",
-  "contributes": {},
+  "contributes": {
+    "commands": [
+      {
+        "command": "autofix.helloWorld",
+        "title": "Hello World"
+      }
+    ]
+  },
   "scripts": {
     "lint": "eslint src",
     "test": "vscode-test"
