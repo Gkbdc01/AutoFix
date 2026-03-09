@@ -19,10 +19,11 @@
 5. [Tech Stack](#5-tech-stack)
 6. [Quick Start Guide](#6-quick-start-guide)
 7. [API Endpoints](#7-api-endpoints)
-8. [Security](#8-security)
-9. [Future Scope](#9-future-scope)
-10. [Team](#10-team)
-11. [License](#11-license)
+8. [Testing](#8-testing)
+9. [Security](#9-security)
+10. [Future Scope](#10-future-scope)
+11. [Team](#11-team)
+12. [License](#12-license)
 
 ---
 
@@ -37,8 +38,6 @@ Write code  →  Save (Ctrl+S)  →  Error detected  →  Line highlighted red
                                         ↓
                Click "🔧 Fix This"  →  Code auto-corrected  →  ✅ No errors
 ```
-
-AutoFix works with **any programming language** — Python, JavaScript, Java, C++, and more — making it a universal debugging companion for all developers.
 
 ### 🎯 Goals
 
@@ -63,8 +62,6 @@ AutoFix works with **any programming language** — Python, JavaScript, Java, C+
 
 ## 2. Features
 
-AutoFix delivers a focused set of features designed to make real-time debugging frictionless. All core features are fully implemented in version 1.0.
-
 | Feature | Status | Description |
 |---|---|---|
 | 🔍 Error Detection on Save | ✅ Implemented | Analyzes code via LLM every time a file is saved |
@@ -76,25 +73,9 @@ AutoFix delivers a focused set of features designed to make real-time debugging 
 | ✅ Input Validation | ✅ Implemented | Pydantic v2 models validate all incoming API requests |
 | 🔒 CORS Configuration | ✅ Implemented | Configured for seamless extension ↔ backend communication |
 
-### Feature Details
-
-#### 🔍 Error Detection on Save
-Whenever you press `Ctrl+S` in VS Code, the AutoFix extension captures the active file content and language, then sends it to the backend for analysis. The LLM examines the code for syntax errors, missing tokens, invalid constructs, and logical issues — returning the result within milliseconds.
-
-#### 🔴 Error Line Highlighting
-When an error is found, the extension uses the VS Code Diagnostics API to draw a red underline on the specific line containing the error. Hovering over the line shows a tooltip with the exact error message and type, making it easy to understand what went wrong without leaving the editor.
-
-#### 🩹 One-Click Fix
-A "Fix This" button appears in a toast notification alongside the error message. Clicking it sends the code and error context to the backend's `/fix` endpoint. The AI returns corrected code which is automatically applied to the editor, replacing the file content with the fixed version.
-
-#### 🌐 Multi-Language Support
-Unlike traditional linters that are language-specific, AutoFix leverages an LLM that understands virtually every major programming language. The language is detected from the VS Code active file and included in the API request so the model can tailor its analysis accordingly.
-
 ---
 
 ## 3. Architecture
-
-AutoFix is built on a two-component architecture: a lightweight VS Code Extension (JavaScript) that handles editor integration, and a FastAPI Backend (Python) that manages all AI processing and business logic.
 
 ### 3.1 Architecture Diagram
 
@@ -110,8 +91,6 @@ AutoFix is built on a two-component architecture: a lightweight VS Code Extensio
 ```
 
 ### 3.2 Data Flow
-
-The following steps describe the complete request lifecycle from editor action to code correction:
 
 1. User saves a file in VS Code (`Ctrl+S`)
 2. Extension captures the file content and language identifier
@@ -141,162 +120,87 @@ The following steps describe the complete request lifecycle from editor action t
 
 ## 4. Project Structure
 
-The repository is organized into two top-level folders — the VS Code extension and the FastAPI backend — each self-contained with its own dependencies and configuration.
-
 ```
 AutoFix/
 ├── AutoFix-extension/            # VS Code extension (JavaScript)
 │   ├── src/
-│   │   └── extension.js          # Main extension logic (event listeners, API calls, UI)
-│   ├── package.json              # Extension manifest, dependencies, activation events
+│   │   └── extension.js          # Main extension logic
+│   ├── package.json              # Extension manifest
 │   └── README.md
 │
 ├── AutoFix-backend/              # FastAPI backend (Python)
 │   ├── app/
-│   │   ├── main.py               # App entry point: FastAPI init, CORS, rate limiting
+│   │   ├── main.py               # App entry point
 │   │   ├── routes/
-│   │   │   ├── analyze.py        # POST /analyze — error detection endpoint
-│   │   │   └── fix.py            # POST /fix — one-click correction endpoint
+│   │   │   ├── analyze.py        # POST /analyze
+│   │   │   └── fix.py            # POST /fix
 │   │   ├── services/
-│   │   │   └── llm_service.py    # Azure AI Foundry integration (GPT-5-nano)
+│   │   │   └── llm_service.py    # Azure AI Foundry integration
 │   │   └── models/
-│   │       └── schemas.py        # Pydantic request/response models
-│   ├── .env.example              # Environment variable template (API keys)
-│   ├── requirements.txt          # Python dependencies
+│   │       └── schemas.py        # Pydantic models
+│   ├── .env.example
+│   ├── requirements.txt
 │   └── README.md
 │
-├── Documentation.md              # Extended project documentation
-├── .gitignore                    # Ignores .env, venv, node_modules, etc.
-├── LICENSE                       # MIT License
-└── README.md                     # Project overview and quick start
+├── screenshots/                  # Testing screenshots
+├── Documentation.md
+├── .gitignore
+├── LICENSE
+└── README.md
 ```
-
-### Key Files Explained
-
-| File | Purpose |
-|---|---|
-| `extension.js` | Core VS Code extension logic: handles onSave events, calls the backend, renders highlights and toasts, applies fixes |
-| `main.py` | FastAPI application setup: registers routes, configures CORS middleware, initializes SlowAPI rate limiter |
-| `analyze.py` | Defines the `POST /analyze` route: validates input and calls the LLM service to detect errors |
-| `fix.py` | Defines the `POST /fix` route: validates input and calls the LLM service to generate corrected code |
-| `llm_service.py` | Handles all Azure AI Foundry communication: builds prompts, sends requests, parses GPT-5-nano responses |
-| `schemas.py` | Pydantic v2 models defining request and response shapes for all API endpoints |
-| `.env.example` | Template for required environment variables — copy to `.env` and fill in your Azure API key |
-| `requirements.txt` | Python package dependencies: fastapi, uvicorn, slowapi, pydantic, azure-ai-inference, etc. |
 
 ---
 
 ## 5. Tech Stack
 
-AutoFix uses a modern, lightweight tech stack chosen for speed, simplicity, and ease of development. The backend is entirely Python-based, while the extension is pure JavaScript.
-
 | Component | Technology | Notes |
 |---|---|---|
-| VS Code Extension | JavaScript | Uses VS Code Extension API for editor integration |
-| HTTP Client (Extension) | Axios | Makes REST calls from extension to backend |
-| Backend Framework | FastAPI | High-performance Python async API framework |
-| ASGI Server | Uvicorn | Runs FastAPI with async support |
-| AI / LLM | Azure AI Foundry (GPT-5-nano) | Handles code analysis and correction |
+| VS Code Extension | JavaScript | VS Code Extension API |
+| HTTP Client | Axios | REST calls from extension to backend |
+| Backend Framework | FastAPI | Python async API framework |
+| ASGI Server | Uvicorn | Runs FastAPI |
+| AI / LLM | Azure AI Foundry (GPT-5-nano) | Code analysis and correction |
 | Rate Limiting | SlowAPI | 30 req/min per IP |
-| Input Validation | Pydantic v2 | Schema validation for all API requests |
-| Backend Language | Python 3.9+ | Primary backend language |
-| Extension Language | JavaScript | VS Code extension language |
+| Input Validation | Pydantic v2 | Schema validation |
 
 ---
 
 ## 6. Quick Start Guide
 
-Follow this step-by-step guide to get AutoFix running locally. You will need to set up both the backend server and the VS Code extension.
-
 ### Prerequisites
 
-| Requirement | Minimum Version | Notes |
-|---|---|---|
-| Python | 3.9+ | Required for the FastAPI backend |
-| pip | Latest | For installing Python packages |
-| Node.js | 16+ | Required for the VS Code extension |
-| npm | Latest | For installing extension dependencies |
-| Visual Studio Code | Latest | The target editor for the extension |
-| Azure AI Foundry API Key | — | Required for GPT-5-nano access |
-
----
+| Requirement | Version |
+|---|---|
+| Python | 3.9+ |
+| Node.js | 16+ |
+| Visual Studio Code | Latest |
+| Azure AI Foundry API Key | — |
 
 ### 6.1 Backend Setup
 
-**Step 1 — Clone the Repository**
-
 ```bash
 git clone https://github.com/Gkbdc01/AutoFix.git
-cd AutoFix
-```
-
-**Step 2 — Create and Activate a Virtual Environment**
-
-```bash
-cd AutoFix-backend
-
+cd AutoFix/AutoFix-backend
 python -m venv venv
-
-# Windows:
-venv\Scripts\activate
-
-# macOS / Linux:
-source venv/bin/activate
-```
-
-**Step 3 — Install Python Dependencies**
-
-```bash
+venv\Scripts\activate        # Windows
 pip install -r requirements.txt
-```
-
-**Step 4 — Configure Environment Variables**
-
-```bash
-cp .env.example .env
-# Open .env and fill in your Azure AI Foundry API key
-```
-
-**Step 5 — Start the Backend Server**
-
-```bash
+cp .env.example .env         # Add your Azure API key
 uvicorn app.main:app --port 5000 --reload
 ```
 
-> ✅ **Backend Running:** The API is now live at `http://localhost:5000`
-> Visit `http://localhost:5000/docs` for the interactive Swagger UI.
-
----
-
 ### 6.2 Extension Setup
-
-**Step 1 — Navigate to Extension Folder**
 
 ```bash
 cd AutoFix-extension
-```
-
-**Step 2 — Install Dependencies**
-
-```bash
 npm install
+# Press F5 in VS Code → Select "VS Code Extension Development"
 ```
-
-**Step 3 — Launch the Extension**
-
-Open the `AutoFix-extension` folder in VS Code, then press **F5** to launch the Extension Development Host. A new VS Code window will open with AutoFix active.
-
-> ✅ **Extension Active:** Open any code file in the new window, make an error, and press `Ctrl+S`. AutoFix will detect the error and highlight the line automatically.
 
 ---
 
 ## 7. API Endpoints
 
-The AutoFix backend exposes a simple REST API with two core endpoints for code analysis and fixing, plus a health check. All endpoints are available via Swagger UI at `/docs`.
-
 **Base URL:** `http://localhost:5000`
-
-### Endpoint Summary
 
 | Method | Endpoint | Description | Returns |
 |---|---|---|---|
@@ -305,135 +209,189 @@ The AutoFix backend exposes a simple REST API with two core endpoints for code a
 | `GET` | `/health` | Server health check | `{ status: "ok" }` |
 | `GET` | `/docs` | Interactive Swagger UI | Browser documentation |
 
----
-
 ### 7.1 POST `/analyze`
 
-Analyzes submitted source code and returns whether an error exists, the line number where it occurs, and a description of the error. This endpoint is called automatically on every file save.
-
-**Request Body:**
-
+**Request:**
 ```json
 {
-  "code": "def hello()\n    print('Hello')",
+  "code": "x = 10\ny = 0\nresult = x / y\nprint(result)",
   "language": "python"
 }
 ```
 
 **Response — Error Found:**
-
 ```json
 {
   "hasError": true,
-  "line": 1,
-  "message": "SyntaxError: Missing colon after function definition on line 1"
+  "line": 3,
+  "message": "Division by zero error: attempting to divide by zero (x / y).",
+  "source": "llm"
 }
 ```
-
-**Response — No Error:**
-
-```json
-{
-  "hasError": false,
-  "line": null,
-  "message": null
-}
-```
-
----
 
 ### 7.2 POST `/fix`
 
-Accepts code with a known error and returns a fully corrected version along with a plain-English explanation of what was changed. The corrected code is automatically applied to the editor.
-
-**Request Body:**
-
+**Request:**
 ```json
 {
-  "code": "def hello()\n    print('Hello')",
+  "code": "x = 10\ny = 0\nresult = x / y\nprint(result)",
   "language": "python",
-  "error": "SyntaxError: Missing colon after function definition on line 1"
+  "line": 3,
+  "message": "Division by zero error"
 }
 ```
 
 **Response:**
-
 ```json
 {
   "fixed": true,
-  "fixedCode": "def hello():\n    print('Hello')",
-  "explanation": "Added missing colon after the function definition on line 1."
+  "fixedCode": "x = 10\ny = 0\nif y != 0:\n    result = x / y\n    print(result)\nelse:\n    print('Cannot divide by zero')",
+  "explanation": "Added a guard to prevent division by zero by checking if y != 0."
 }
 ```
 
 ---
 
-### 7.3 GET `/health`
+## 8. Testing
 
-Simple health check to confirm the backend server is running and reachable.
+All testing was performed using two methods:
+1. **VS Code Extension** (Extension Development Host) — end-to-end testing with real file save trigger
+2. **Swagger UI** (`http://localhost:5000/docs`) — direct API testing
 
-**Response:**
+### 8.1 Test Environment
 
-```json
-{
-  "status": "ok"
-}
+| Parameter | Details |
+|---|---|
+| Testing Tool | VS Code Extension Development Host + Swagger UI |
+| Backend URL | http://localhost:5000 |
+| AI Model | Azure AI Foundry — GPT-5-nano |
+| Test Language | Python |
+| Tester | Abhishek Narwar |
+
+---
+
+### 8.2 Step 1 — Backend Server Running
+
+Backend started successfully. Terminal shows live logs — `/analyze` requests received, Azure AI Foundry connected, LLM responding with HTTP 200 OK.
+
+![Backend Terminal Logs](screenshots/ss1_backend.png)
+
+> ✅ `Uvicorn running on http://127.0.0.1:5000` — Backend live, Azure AI Foundry responding.
+
+---
+
+### 8.3 Step 2 — Error Detection on File Save (Ctrl+S)
+
+Opened `demo.py` with a division by zero bug and pressed `Ctrl+S`. AutoFix **automatically detected the error** and highlighted Line 3 in red — no manual trigger needed.
+
+**Buggy Code:**
+```python
+x = 10
+y = 0
+result = x / y   ← Line 3: Division by zero bug
+print(result)
 ```
 
----
+![Error Line Highlighted Red](screenshots/ss2_error_highlight.png)
 
-### 7.4 GET `/docs`
-
-Opens the automatically generated **Swagger UI** provided by FastAPI. From this browser interface you can explore all endpoints, view request/response schemas, and send live test requests to the API.
+> ✅ Line 3 highlighted red immediately after `Ctrl+S`. AI correctly identified division by zero.
 
 ---
 
-## 8. Security
+### 8.4 Step 3 — AI Fix Applied Automatically
 
-AutoFix is designed as a local developer tool. The following security practices are implemented to ensure safe operation.
+Clicked "🔧 Fix This" — AutoFix sent code to `/fix` endpoint. AI generated corrected code with a zero-check guard and **automatically replaced the file content**.
 
-| Practice | Status | Implementation Details |
+**Fixed Code (auto-applied):**
+```python
+x = 10
+y = 0
+if y != 0:
+    result = x / y
+    print(result)
+else:
+    print("Cannot divide by zero")
+```
+
+![AutoFix Fixed](screenshots/ss3_fixed.png)
+
+> ✅ `AutoFix: Fixed! — Added a guard to prevent division by zero` — Code corrected and applied automatically.
+
+---
+
+### 8.5 Step 4 — No Errors Found After Fix
+
+After fix was applied, file was auto-saved and re-analyzed. AutoFix confirmed the code is now clean.
+
+![No Errors Found](screenshots/ss4_no_errors.png)
+
+> ✅ `AutoFix: No errors found ✅` — Red highlight removed. Fix was successful.
+
+---
+
+### 8.6 API Test Cases (Swagger UI)
+
+| Test ID | Test Case | Input | Expected | Actual | Status |
+|---|---|---|---|---|---|
+| TC-01 | Health check | GET `/health` | `{ "status": "ok" }` | `{ "status": "ok" }` | ✅ PASS |
+| TC-02 | Detect division by zero | Python buggy code | hasError: true, line: 3 | hasError: true, line: 3 | ✅ PASS |
+| TC-03 | Detect missing colon | `def hello()` | hasError: true, line: 1 | hasError: true, line: 1 | ✅ PASS |
+| TC-04 | Valid code — no error | `x = 10; print(x)` | hasError: false | hasError: false | ✅ PASS |
+| TC-05 | Fix division by zero | buggy division code | fixed: true, zero-check added | Fixed code with if/else guard | ✅ PASS |
+| TC-06 | Fix missing colon | `def hello()` | fixed: true, colon added | `def hello():` returned | ✅ PASS |
+
+---
+
+### 8.7 Test Summary
+
+| Category | Total | Passed | Failed |
+|---|---|---|---|
+| End-to-End Extension Testing | 4 | 4 | 0 |
+| API Testing via Swagger | 6 | 6 | 0 |
+| **Total** | **10** | **10** | **0** |
+
+> ✅ **All 10 tests passed.** AutoFix successfully detects errors on file save, highlights the error line in red, applies AI-generated fixes automatically, and confirms clean code — complete end-to-end flow verified.
+
+---
+
+## 9. Security
+
+| Practice | Status | Details |
 |---|---|---|
-| Rate Limiting | ✅ Active | 30 requests/min per IP enforced via SlowAPI middleware |
-| Input Validation | ✅ Active | All API inputs validated with Pydantic v2 schemas before processing |
-| CORS | ✅ Configured | Cross-Origin headers scoped for extension ↔ backend communication |
-| No Secrets in Repo | ✅ Safe | `.env` is gitignored; `.env.example` provided as a safe template |
-| No Database | N/A | Stateless tool — no SQL/NoSQL, no persistent user data |
-| No Authentication | N/A | Local-only extension — no remote users or accounts |
-
-> 🔐 **Important:** Never commit your `.env` file to version control. Your Azure AI Foundry API key should only ever exist in your local `.env` file. The `.gitignore` in this repo already excludes `.env` by default.
+| Rate Limiting | ✅ Active | 30 requests/min per IP via SlowAPI |
+| Input Validation | ✅ Active | Pydantic v2 schema validation on all inputs |
+| CORS | ✅ Configured | Scoped for extension ↔ backend communication |
+| No Secrets in Repo | ✅ Safe | `.env` gitignored, `.env.example` provided |
+| No Database | N/A | Stateless tool — no persistent user data |
+| No Authentication | N/A | Local-only extension |
 
 ---
 
-## 9. Future Scope
-
-The following enhancements are planned for future versions of AutoFix, based on user feedback and identified limitations of the current implementation.
+## 10. Future Scope
 
 | Feature | Priority | Description |
 |---|---|---|
-| Multi-error Detection | 🔴 High | Detect and highlight all errors simultaneously, not just the first one found |
-| Error Severity Levels | 🔴 High | Distinguish between errors, warnings, and informational hints |
-| Auto-fix on Save | 🟡 Medium | Optional setting to apply fixes automatically without clicking "🔧 Fix This" |
-| Configurable Backend URL | 🟡 Medium | Allow users to set a custom backend URL through VS Code settings |
-| Marketplace Publishing | 🟡 Medium | Publish AutoFix to the VS Code Extension Marketplace for wider distribution |
-| Workspace-wide Analysis | 🟢 Low | Scan all files in a project, not just the currently active file |
-| Diff View Before Fix | 🟢 Low | Show a side-by-side preview of what will change before applying the fix |
+| Multi-error Detection | 🔴 High | Detect all errors simultaneously, not just the first |
+| Error Severity Levels | 🔴 High | Distinguish errors, warnings, and hints |
+| Auto-fix on Save | 🟡 Medium | Apply fixes automatically without button click |
+| Configurable Backend URL | 🟡 Medium | Custom backend URL via VS Code settings |
+| Marketplace Publishing | 🟡 Medium | Publish to VS Code Extension Marketplace |
+| Workspace-wide Analysis | 🟢 Low | Scan all files in a project |
+| Diff View Before Fix | 🟢 Low | Preview changes before applying fix |
 
 ---
 
-## 10. Team
-
-AutoFix was built by a three-person team, each responsible for a distinct area of the project.
+## 11. Team
 
 | Member | Role | Responsibilities |
 |---|---|---|
-| **Vivek Chaudhary** | Backend / AI Lead | FastAPI backend architecture, Azure AI Foundry integration, LLM service, Pydantic schemas |
-| **Gaurav Kumar** | Frontend Lead | VS Code extension development, editor API integration, UI (highlights, toasts, fix button) |
-| **Abhishek Narwar** | Testing & Documentation | End-to-end testing, bug reporting, project documentation, README and user guides |
+| **Vivek Chaudhary** | Backend / AI Lead | FastAPI backend, Azure AI Foundry integration, LLM service |
+| **Gaurav Kumar** | Frontend Lead | VS Code extension, editor API, UI (highlights, toasts, fix button) |
+| **Abhishek Narwar** | Testing & Documentation | End-to-end testing, API testing via Swagger, test case design, project documentation |
 
 ---
 
-## 11. License
+## 12. License
 
 This project is licensed under the **MIT License**.
 
