@@ -1,0 +1,12 @@
+{
+  "enabled": true,
+  "severity": {
+    "syntax": "error",
+    "logic": "error",
+    "performance": "warning",
+    "security": "error"
+  },
+  "ignoreRules": [],
+  "debounceMs": 500,
+  "maxErrors": 5
+}
