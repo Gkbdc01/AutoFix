@@ -12,6 +12,7 @@ from slowapi.middleware import SlowAPIMiddleware
 
 from app.routes.analyze import router as analyze_router
 from app.routes.fix import router as fix_router
+from app.routes.dashboard import router as dashboard_router
 
 # Load environment variables from .env file (OPENAI_API_KEY, etc.)
 # override=True ensures .env values always take precedence over stale env vars
@@ -50,6 +51,7 @@ app.add_middleware(
 # Routes
 app.include_router(analyze_router)
 app.include_router(fix_router)
+app.include_router(dashboard_router)
 
 
 # Health check

@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+import difflib
 from typing import Any, Dict
 
 from openai import AsyncOpenAI
@@ -19,19 +20,20 @@ You will receive source code along with its programming language.
 Your task:
 1. Analyse the code carefully for bugs, syntax errors, type errors, \
 logical mistakes, or any other issues.
-2. Identify the **single most critical error** (if any).
+2. Identify UP TO 5 most critical errors (if any).
 3. Return your answer as a JSON object with exactly these fields:
 
-   • "hasError"  (boolean) – true if you found an error, false otherwise.
-   • "line"      (integer) – the 1-based line number of the error. \
-Omit or set to null when hasError is false.
-   • "message"   (string)  – a concise, developer-friendly description \
-of the error. Omit or set to null when hasError is false.
+   • "hasError"     (boolean) – true if you found any errors, false otherwise.
+   • "errors"       (array)   – list of error objects. Each has:
+     - "line"       (integer) – 1-based line number
+     - "message"    (string)  – concise description
+     - "errorType"  (string)  – one of: 'syntax', 'logic', 'performance', 'security', 'general'
+     - "severity"   (string)  – one of: 'error', 'warning', 'info'
 
 Rules:
-- Only flag genuine errors — do NOT flag style preferences, missing \
-comments, or minor naming conventions.
-- If the code is correct, return {"hasError": false}.
+- Only flag genuine errors — do NOT flag style preferences, missing comments, or minor naming conventions.
+- Sort errors by line number (ascending).
+- If the code is correct, return {"hasError": false, "errors": []}.
 - Always return valid JSON and nothing else.
 """
 
@@ -46,25 +48,22 @@ def _build_user_message(language: str, code: str) -> str:
     )
 
 
-async def analyze_code(language: str, code: str) -> Dict[str, Any]:
-    """Send code to Azure AI Foundry and return a structured error analysis."""
+async def analyze_code(language: str, code: str) -> Dict[str, any]:
+    """Send code to Azure AI Foundry and return a structured error analysis with multiple errors."""
     api_key = os.getenv("OPENAI_API_KEY", "").strip().strip('"')
     if not api_key:
         logger.error("OPENAI_API_KEY is not set — returning no-error fallback.")
-        return {"hasError": False, "source": "fallback", "message": "API key not configured."}
+        return {"hasError": False, "errors": [], "source": "fallback"}
 
     model = os.getenv("OPENAI_MODEL", "gpt-5-nano").strip().strip('"')
     base_url = os.getenv("AZURE_BASE_URL", "").strip().strip('"')
 
     if not base_url:
         logger.error("AZURE_BASE_URL is not set — returning no-error fallback.")
-        return {"hasError": False, "source": "fallback", "message": "AZURE_BASE_URL not configured."}
+        return {"hasError": False, "errors": [], "source": "fallback"}
 
     logger.info("Using AsyncOpenAI with base_url=%s, model=%s", base_url, model)
 
-    # Azure AI Foundry uses the standard OpenAI client with a custom base_url
-    # This matches the pattern:
-    #   OpenAI(base_url="https://..../openai/v1/", api_key=key)
     client = AsyncOpenAI(
         base_url=base_url,
         api_key=api_key,
@@ -81,24 +80,36 @@ async def analyze_code(language: str, code: str) -> Dict[str, Any]:
         )
 
         content = response.choices[0].message.content
-        logger.info("Raw LLM response: %s", content)
+        logger.info("Raw LLM response: %s", content[:300])
         result = json.loads(content)
 
         has_error = bool(result.get("hasError", False))
+        errors = result.get("errors", []) if has_error else []
+        
+        # Validate and normalize error objects
+        normalized_errors = []
+        for err in errors:
+            if isinstance(err, dict) and "line" in err and "message" in err:
+                normalized_errors.append({
+                    "line": int(err["line"]),
+                    "message": str(err["message"]),
+                    "errorType": str(err.get("errorType", "general")),
+                    "severity": str(err.get("severity", "error")),
+                })
+        
         return {
             "hasError": has_error,
-            "line": int(result["line"]) if has_error and result.get("line") else None,
-            "message": str(result["message"]) if has_error and result.get("message") else None,
+            "errors": normalized_errors,
             "source": "llm",
         }
 
     except json.JSONDecodeError as exc:
         logger.exception("Failed to parse LLM JSON response: %s", exc)
-        return {"hasError": False, "source": "error", "message": f"LLM returned invalid JSON: {exc}"}
+        return {"hasError": False, "errors": [], "source": "error"}
 
     except Exception as exc:
         logger.exception("OpenAI API call failed: %s", exc)
-        return {"hasError": False, "source": "error", "message": f"LLM call failed: {exc}"}
+        return {"hasError": False, "errors": [], "source": "error"}
 
 FIX_SYSTEM_PROMPT = """\
 You are an expert code fixer.
@@ -170,3 +181,19 @@ async def fix_code(language: str, code: str, line: int, message: str) -> Dict[st
     except Exception as exc:
         logger.exception("Fix API call failed: %s", exc)
         return {"fixed": False, "source": "error", "explanation": f"LLM call failed: {exc}"}
+
+
+def generate_diff(original_code: str, fixed_code: str) -> str:
+    """Generate a unified diff between original and fixed code."""
+    original_lines = original_code.splitlines(keepends=True)
+    fixed_lines = fixed_code.splitlines(keepends=True)
+    
+    diff_lines = difflib.unified_diff(
+        original_lines,
+        fixed_lines,
+        fromfile="original.txt",
+        tofile="fixed.txt",
+        lineterm="",
+    )
+    
+    return "\n".join(diff_lines)

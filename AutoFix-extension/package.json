@@ -1,8 +1,8 @@
 {
   "name": "autofix",
   "displayName": "AutoFix",
-  "description": "AI-powered code error detection on save",
-  "version": "0.0.1",
+  "description": "AI-powered code error detection on save with multi-error support and fix preview",
+  "version": "0.1.0",
   "engines": {
     "vscode": "^1.96.0"
   },
@@ -16,10 +16,24 @@
   "contributes": {
     "commands": [
       {
-        "command": "autofix.helloWorld",
-        "title": "Hello World"
+        "command": "autofix.clearHistory",
+        "title": "AutoFix: Clear Error History"
+      },
+      {
+        "command": "autofix.reloadConfig",
+        "title": "AutoFix: Reload Configuration"
       }
-    ]
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "autofixDashboard",
+          "name": "AutoFix Dashboard",
+          "icon": "$(bug)",
+          "contextualTitle": "Error Analysis"
+        }
+      ]
+    }
   },
   "scripts": {
     "lint": "eslint src",
