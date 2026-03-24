@@ -56,22 +56,40 @@ Write code  →  Save (Ctrl+S)  →  Error detected  →  Line highlighted red
 | AI Model | Azure AI Foundry — GPT-5-nano |
 | Repository | https://github.com/Gkbdc01/AutoFix |
 | License | MIT |
-| Status | Active — Version 1.0 |
+| Status | Active — Version 1.1 |
 
 ---
 
 ## 2. Features
 
+### Core Features
 | Feature | Status | Description |
 |---|---|---|
 | 🔍 Error Detection on Save | ✅ Implemented | Analyzes code via LLM every time a file is saved |
-| 🔴 Error Line Highlighting | ✅ Implemented | Highlights the error line in red with hover details |
+| 🔴 Error Line Highlighting | ✅ Implemented | Highlights error and warning lines with color coding |
 | 🔔 Toast Notifications | ✅ Implemented | Shows warning/info messages with error descriptions |
 | 🩹 One-Click Fix | ✅ Implemented | "🔧 Fix This" button sends code to LLM and applies correction |
 | 🌐 Multi-Language Support | ✅ Implemented | Works with Python, JavaScript, Java, C++, and any language |
+
+### New in v1.1
+| Feature | Status | Description |
+|---|---|---|
+| 🎯 Multi-Error Support | ✅ NEW | Detects and displays up to 5 errors per file, not just the most critical |
+| 🔀 Diff Preview | ✅ NEW | Side-by-side preview of changes before applying fixes |
+| ⚡ Smart Caching | ✅ NEW | Caches analysis results to reduce redundant API calls |
+| 📊 Error Dashboard | ✅ NEW | Sidebar panel showing error statistics and recent errors |
+| ⚙️ Custom Configuration | ✅ NEW | `.autofixconfig.json` support for severity levels and rule customization |
+| 🎨 Severity Levels | ✅ NEW | Errors and warnings with different colors (red/orange highlighting) |
+| 🔄 Debouncing | ✅ NEW | Smart debouncing prevents analysis during rapid saves |
+| 📈 Error History | ✅ NEW | Backend tracks all detected errors for analytics |
+
+### Enterprise Features
+| Feature | Status | Description |
+|---|---|---|
 | 🚦 Rate Limiting | ✅ Implemented | 30 requests/min per IP via SlowAPI to prevent abuse |
 | ✅ Input Validation | ✅ Implemented | Pydantic v2 models validate all incoming API requests |
 | 🔒 CORS Configuration | ✅ Implemented | Configured for seamless extension ↔ backend communication |
+| 📡 RESTful API | ✅ Implemented | Full REST API with Swagger docs at `/docs` |
 
 ---
 
@@ -124,24 +142,29 @@ Write code  →  Save (Ctrl+S)  →  Error detected  →  Line highlighted red
 AutoFix/
 ├── AutoFix-extension/            # VS Code extension (JavaScript)
 │   ├── src/
-│   │   └── extension.js          # Main extension logic
-│   ├── package.json              # Extension manifest
+│   │   ├── extension.js          # Main extension logic (multi-error, caching, preview)
+│   │   └── dashboard.js          # Error dashboard tree provider
+│   ├── package.json              # Extension manifest with views
 │   └── README.md
 │
 ├── AutoFix-backend/              # FastAPI backend (Python)
 │   ├── app/
 │   │   ├── main.py               # App entry point
 │   │   ├── routes/
-│   │   │   ├── analyze.py        # POST /analyze
-│   │   │   └── fix.py            # POST /fix
+│   │   │   ├── analyze.py        # POST /analyze (multi-error)
+│   │   │   ├── fix.py            # POST /fix (with diff)
+│   │   │   └── dashboard.py      # GET /history, /stats, /config
 │   │   ├── services/
-│   │   │   └── llm_service.py    # Azure AI Foundry integration
+│   │   │   ├── llm_service.py    # Azure AI Foundry integration
+│   │   │   ├── error_history.py  # Error tracking & stats
+│   │   │   └── config_service.py # Configuration management
 │   │   └── models/
-│   │       └── schemas.py        # Pydantic models
+│   │       └── schemas.py        # Pydantic models (with CodeError, ErrorStats)
 │   ├── .env.example
 │   ├── requirements.txt
 │   └── README.md
 │
+├── .autofixconfig.json           # Configuration file (NEW)
 ├── screenshots/                  # Testing screenshots
 ├── Documentation.md
 ├── .gitignore
@@ -202,30 +225,114 @@ npm install
 
 **Base URL:** `http://localhost:5000`
 
+### Core Endpoints
 | Method | Endpoint | Description | Returns |
 |---|---|---|---|
-| `POST` | `/analyze` | Analyze code for bugs | `{ hasError, line, message }` |
-| `POST` | `/fix` | Fix a detected error | `{ fixed, fixedCode, explanation }` |
+| `POST` | `/analyze` | Analyze code for bugs (multi-error) | `{ hasError, errors[], source }` |
+| `POST` | `/fix` | Fix a detected error | `{ fixed, fixedCode, explanation, diff }` |
 | `GET` | `/health` | Server health check | `{ status: "ok" }` |
-| `GET` | `/docs` | Interactive Swagger UI | Browser documentation |
 
-### 7.1 POST `/analyze`
+### New Analytics Endpoints (v1.1)
+| Method | Endpoint | Description | Returns |
+|---|---|---|---|
+| `GET` | `/history` | Get recent error history | `{ count, errors[] }` |
+| `GET` | `/stats` | Get error statistics | `{ totalErrors, errorsByType, errorsBySeverity, recentErrors[] }` |
+| `POST` | `/history/clear` | Clear error history | `{ status: "cleared" }` |
+| `GET` | `/config` | Get current configuration | Configuration object |
+| `POST` | `/config/reload` | Reload configuration from disk | `{ status, config }` |
+
+### Documentation
+| Endpoint | Description |
+|---|---|
+| `GET` | `/docs` — Interactive Swagger UI |
+| `GET` | `/redoc` — ReDoc API documentation |
+
+### 7.1 POST `/analyze` — Multiple Errors
 
 **Request:**
 ```json
 {
-  "code": "x = 10\ny = 0\nresult = x / y\nprint(result)",
-  "language": "python"
+  "code": "def foo():\n  x = 10\n  y = 0\n  return x / y",
+  "language": "python",
+  "filePath": "/path/to/file.py"
 }
 ```
 
-**Response — Error Found:**
+**Response — Errors Found:**
 ```json
 {
   "hasError": true,
-  "line": 3,
-  "message": "Division by zero error: attempting to divide by zero (x / y).",
+  "errors": [
+    {
+      "line": 4,
+      "message": "Division by zero error",
+      "errorType": "logic",
+      "severity": "error"
+    },
+    {
+      "line": 2,
+      "message": "Unused variable 'x'",
+      "errorType": "general",
+      "severity": "warning"
+    }
+  ],
   "source": "llm"
+}
+```
+
+### 7.2 POST `/fix` — With Diff Preview
+
+**Request:**
+```json
+{
+  "code": "def foo():\n  return 10 / 0",
+  "language": "python",
+  "line": 2,
+  "message": "Division by zero",
+  "filePath": "/path/to/file.py"
+}
+```
+
+**Response — Fix Generated:**
+```json
+{
+  "fixed": true,
+  "fixedCode": "def foo():\n  if y != 0:\n    return 10 / y\n  else:\n    return None",
+  "explanation": "Added zero-check before division",
+  "diff": "--- original.txt\n+++ fixed.txt\n@@ -1,2 +1,5 @@\n-  return 10 / 0\n+  if y != 0:\n+    return 10 / y\n+  else:\n+    return None",
+  "source": "llm"
+}
+```
+
+### 7.3 GET `/stats` — Error Statistics
+
+**Response:**
+```json
+{
+  "totalErrors": 42,
+  "errorsByType": {
+    "syntax": 8,
+    "logic": 15,
+    "performance": 12,
+    "security": 7
+  },
+  "errorsBySeverity": {
+    "error": 30,
+    "warning": 12
+  },
+  "mostCommonFile": "/src/main.py",
+  "recentErrors": [
+    {
+      "timestamp": "2024-03-24T10:30:45.123456",
+      "filePath": "/src/app.js",
+      "language": "javascript",
+      "line": 45,
+      "message": "Undefined variable 'config'",
+      "errorType": "logic",
+      "severity": "error",
+      "fixed": false
+    }
+  ]
 }
 ```
 
