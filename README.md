@@ -1,4 +1,4 @@
-# 🔧 AutoFix — AI-Driven Bug Detection & Code Debugger for VS Code
+# AutoFix — AI-Driven Bug Detection & Code Debugger for VS Code
 
 > AutoFix is a Visual Studio Code extension that **automatically detects bugs in your code on every save** and offers **one-click AI-powered fixes** — powered by a FastAPI backend connected to **Azure AI Foundry (GPT-5-nano)**.
 
@@ -10,7 +10,7 @@
 
 ---
 
-## 📋 Table of Contents
+## Table of Contents
 
 1. [Project Overview](#1-project-overview)
 2. [Features](#2-features)
@@ -31,7 +31,7 @@
 
 **AutoFix** is a developer productivity tool that brings real-time AI-powered bug detection directly into Visual Studio Code. Every time you save a file (`Ctrl+S`), AutoFix silently analyzes your code, highlights any errors inline, and offers a one-click fix — no context switching, no manual debugging.
 
-### 🔄 Demo Flow
+### Demo Flow
 
 ```
 Write code  →  Save (Ctrl+S)  →  Error detected  →  Line highlighted red
@@ -39,7 +39,7 @@ Write code  →  Save (Ctrl+S)  →  Error detected  →  Line highlighted red
                Click "🔧 Fix This"  →  Code auto-corrected  →  ✅ No errors
 ```
 
-### 🎯 Goals
+### Goals
 
 - Detect bugs in real time on every file save inside VS Code
 - Provide context-aware AI corrections using Azure AI Foundry (GPT-5-nano)
@@ -47,7 +47,7 @@ Write code  →  Save (Ctrl+S)  →  Error detected  →  Line highlighted red
 - Expose a clean, rate-limited REST API for seamless editor integration
 - Keep the tool lightweight, local, and stateless — no database, no remote accounts required
 
-### 📌 Key Highlights
+### Key Highlights
 
 | Attribute | Details |
 |---|---|
@@ -505,7 +505,7 @@ This project is licensed under the **MIT License**.
 ```
 MIT License
 
-Copyright (c) 2026 Gkbdc01
+Copyright (c) 2026 AutoFix
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
