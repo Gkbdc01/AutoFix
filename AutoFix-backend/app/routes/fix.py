@@ -2,7 +2,7 @@
 
 import logging
 from fastapi import APIRouter
-from app.models.schemas import FixRequest, FixResponse
+from app.models.schemas import FixRequest, FixResponse, CodeError
 from app.services import llm_service
 from app.services import error_history
 
@@ -22,22 +22,35 @@ async def fix_code(req: FixRequest):
         message=req.message,
     )
     
+    # Initialize diff
+    diff = None
+    
     # Generate diff if fix was successful
     if result.get("fixed") and result.get("fixedCode"):
         diff = llm_service.generate_diff(req.code, result["fixedCode"])
-        result["diff"] = diff
+        logger.info("Generated diff (length=%d): %s", len(diff), diff[:300])
         
         # Mark error as fixed in history
         error_history.add_error(
             file_path=req.filePath or "unknown",
             language=req.language,
-            error={
-                "line": req.line,
-                "message": req.message,
-                "errorType": "general",
-                "severity": "error",
-            },
+            error=CodeError(
+                line=req.line,
+                message=req.message,
+                errorType="general",
+                severity="error",
+            ),
             fixed=True,
         )
     
-    return result
+    # Explicitly construct response with all fields
+    response = FixResponse(
+        fixed=result.get("fixed", False),
+        fixedCode=result.get("fixedCode"),
+        explanation=result.get("explanation"),
+        source=result.get("source", "llm"),
+        diff=diff
+    )
+    
+    logger.info("Final response: fixed=%s, diff_length=%s", response.fixed, len(response.diff) if response.diff else 0)
+    return response

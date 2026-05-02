@@ -199,7 +199,9 @@ function activate(context) {
                 filePath,
             });
 
+            console.log('Fix response:', response.data);
             const { fixed, fixedCode, explanation, diff } = response.data;
+            console.log('Extracted diff:', diff);
 
             if (fixed && fixedCode) {
                 // Show diff preview in a side-by-side comparison
@@ -243,39 +245,61 @@ function activate(context) {
     }
 
     async function showDiffPreview(original, fixed, diff) {
-        const panel = vscode.window.createWebviewPanel(
-            'autofixDiff',
-            'AutoFix Diff Preview',
-            vscode.ViewColumn.Beside,
-            {}
-        );
+    const panel = vscode.window.createWebviewPanel(
+        'autofixDiff',
+        'AutoFix Diff Preview',
+        vscode.ViewColumn.Beside,
+        { 
+            enableScripts: true,
+            retainContextWhenHidden: true
+        }
+    );
 
-        panel.webview.html = getWebviewContent(original, fixed, diff);
+    panel.webview.html = getWebviewContent(original, fixed, diff);
 
-        return new Promise((resolve) => {
-            const messageHandler = panel.webview.onDidReceiveMessage(
-                (message) => {
-                    panel.dispose();
-                    messageHandler.dispose();
-                    resolve(message.command === 'accept');
-                }
-            );
+    return new Promise((resolve) => {
+        let resolved = false;
+        
+        const messageHandler = panel.webview.onDidReceiveMessage((message) => {
+            console.log('Message received:', message);
+            if (!resolved) {
+                resolved = true;
+                panel.dispose();
+                messageHandler.dispose();
+                resolve(message.command === 'accept');
+            }
         });
-    }
+
+        // Handle panel closure without button click
+        const disposeHandler = panel.onDidDispose(() => {
+            if (!resolved) {
+                resolved = true;
+                messageHandler.dispose();
+                disposeHandler.dispose();
+                resolve(false);
+            }
+        });
+    });
+}
 
     function getWebviewContent(original, fixed, diff) {
-        return `
+    // Escape the diff properly for JSON
+    const diffJson = JSON.stringify(diff || '');
+    
+    return `
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 20px; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 20px; background: #1e1e1e; color: #d4d4d4; }
         .container { max-width: 1200px; margin: 0 auto; }
         h1 { margin-bottom: 20px; font-size: 18px; }
+        .debug-section { background: #2d2d30; padding: 10px; margin: 10px 0; border-radius: 4px; font-size: 12px; }
         .diff-container { 
-            background: #f5f5f5; 
-            border: 1px solid #ddd; 
+            background: #252526; 
+            border: 1px solid #3e3e42; 
             border-radius: 4px; 
             padding: 15px; 
             margin-bottom: 20px;
@@ -287,63 +311,110 @@ function activate(context) {
             line-height: 1.5;
             max-height: 400px;
             overflow-y: auto;
+            min-height: 100px;
         }
-        .remove { color: #d13438; background: #fde7e9; }
-        .add { color: #107c10; background: #f1f1e1; }
-        .buttons { display: flex; gap: 10px; }
+        .remove { color: #f48771; background: #3f2f2f; display: block; }
+        .add { color: #89d185; background: #2f3f2f; display: block; }
+        .neutral { display: block; }
+        .buttons { display: flex; gap: 10px; margin-top: 20px; }
         button { 
             padding: 10px 20px; 
             border: none; 
             border-radius: 4px; 
             cursor: pointer; 
             font-size: 14px;
+            font-weight: bold;
         }
-        .accept { background: #107c10; color: white; }
-        .reject { background: #e81123; color: white; }
+        .accept { background: #007c27; color: white; }
+        .reject { background: #c72c0d; color: white; }
         button:hover { opacity: 0.9; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Review Fix Changes</h1>
-        <div class="diff-container" id="diffView"></div>
+        <div class="debug-section" id="debugInfo">Loading...</div>
+        <div class="diff-container" id="diffView">Preparing diff preview...</div>
         <div class="buttons">
-            <button class="accept" onclick="sendMessage('accept')">✅ Accept & Apply</button>
-            <button class="reject" onclick="sendMessage('reject')">❌ Reject</button>
+            <button class="accept" onclick="acceptFix()">✅ Accept & Apply</button>
+            <button class="reject" onclick="rejectFix()">❌ Reject</button>
         </div>
     </div>
     <script>
         const vscode = acquireVsCodeApi();
         
-        function sendMessage(command) {
-            vscode.postMessage({ command });
+        function acceptFix() {
+            console.log('Accept clicked');
+            vscode.postMessage({ command: 'accept' });
+        }
+        
+        function rejectFix() {
+            console.log('Reject clicked');
+            vscode.postMessage({ command: 'reject' });
         }
 
         function formatDiff(diffText) {
+            console.log('formatDiff called with:', typeof diffText, diffText ? diffText.length : 'null');
+            
+            if (!diffText || diffText.trim() === '') {
+                return '<p style="color: #999;">No diff available</p>';
+            }
+            
             const lines = diffText.split('\\n');
+            console.log('Split into', lines.length, 'lines');
+            
             return lines.map(line => {
                 if (line.startsWith('-') && !line.startsWith('---')) {
-                    return '<span class="remove">' + escapeHtml(line) + '</span>';
+                    return '<div class="remove">' + escapeHtml(line) + '</div>';
                 } else if (line.startsWith('+') && !line.startsWith('+++')) {
-                    return '<span class="add">' + escapeHtml(line) + '</span>';
+                    return '<div class="add">' + escapeHtml(line) + '</div>';
                 }
-                return escapeHtml(line);
-            }).join('\\n');
+                return '<div class="neutral">' + escapeHtml(line) + '</div>';
+            }).join('');
         }
 
         function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
         }
 
-        const diff = ${JSON.stringify(diff || '')};
-        document.getElementById('diffView').innerHTML = formatDiff(diff);
+        // Main execution
+        try {
+            const diff = ${diffJson};
+            console.log('Diff value:', diff);
+            console.log('Diff type:', typeof diff);
+            console.log('Diff length:', diff ? diff.length : 'null/undefined');
+            
+            let debugHtml = '<strong>✓ Webview loaded successfully</strong><br>';
+            debugHtml += 'Diff length: ' + (diff ? diff.length : 0) + ' chars<br>';
+            debugHtml += 'Diff type: ' + typeof diff;
+            
+            document.getElementById('debugInfo').innerHTML = debugHtml;
+            
+            if (diff && diff.length > 0) {
+                console.log('Formatting diff...');
+                const formatted = formatDiff(diff);
+                document.getElementById('diffView').innerHTML = formatted;
+                console.log('Diff formatted successfully');
+            } else {
+                document.getElementById('diffView').innerHTML = '<p style="color: #999; padding: 20px;">No diff data received from backend</p>';
+            }
+        } catch (error) {
+            console.error('Error in webview:', error);
+            document.getElementById('diffView').innerHTML = '<p style="color: red;">Error: ' + error.message + '</p>';
+            document.getElementById('debugInfo').innerHTML = '<strong style="color: red;">✗ Error in webview</strong><br>' + error.message;
+        }
     </script>
 </body>
 </html>
-        `;
-    }
+    `;
+}
 
     function showAllErrors(errors) {
         const items = errors.slice(0, 10).map((e, i) => ({
